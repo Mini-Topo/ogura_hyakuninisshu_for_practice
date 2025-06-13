@@ -9,19 +9,22 @@ async function loadCSV() {
   poems = lines.map(line => {
     const parts = line.split(',');
     const id = parts[0].trim();
-    const shimo = parts[2].trim();
-    const ue = parts[3].trim();
+    const ue = parts[2].trim();
+    const shimo = parts[3].trim();
     const full = ue + '\n' + shimo;
     return { id, full };
   });
   showImage();
 }
 
+function padId(id) {
+  return id.toString().padStart(3, '0'); // "1" → "001"
+}
 
 function showImage() {
   const img = document.getElementById('shimo-image');
   const text = document.getElementById('full-poem');
-  img.src = `images/${poems[index].id}.png`;
+  img.src = `images/f1s1_${padId(poems[index].id)}.jpg`;
   img.style.display = 'block';
   text.style.display = 'none';
   showingImage = true;
