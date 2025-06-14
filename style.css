@@ -1,0 +1,12 @@
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); /* 5列 */
+  grid-template-rows: repeat(2, auto);   /* 2行 */
+  gap: 10px;
+}
+
+.image-grid img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
