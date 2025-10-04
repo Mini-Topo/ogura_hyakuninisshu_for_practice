@@ -1,57 +1,105 @@
-let poems = [];
-let index = 0;
-let showingImage = true;
+const POEM_CSV_PATH = 'poems.csv';
+const IMAGE_COUNT = 10;
+const IMAGE_PATH_PREFIX = 'images/f1s1_';
+const IMAGE_EXTENSION = '.jpg';
+const IMAGE_ID_LENGTH = 3;
 
-const poemText = document.getElementById('poemText');
-const imageGrid = document.getElementById('imageGrid');
+const state = {
+  poems: [],
+  currentIndex: 0,
+};
 
-async function loadCSV() {
-  const response = await fetch('poems.csv');
-  const text = await response.text();
-  const lines = text.trim().split('\n').slice(1); // ヘッダー除去
-  poems = lines.map(line => {
-    const parts = line.split(',');
-    const id = parts[0].trim();
-    const ue = parts[2].trim();
-    const shimo = parts[3].trim();
-    const full = ue + '\n' + shimo;
-    return { id, full, ue, shimo };
-  });
-  createImageGrid();
-  showPoem();
-}
+const poemTextElement = document.getElementById('poemText');
+const imageGridElement = document.getElementById('imageGrid');
 
-function padId(id) {
-  return id.toString().padStart(3, '0'); // "1" → "001"
-}
+document.addEventListener('DOMContentLoaded', initializeApp);
 
-function createImageGrid() {
-  for (let i = 1; i <= 10; i++) {
-    const img = document.createElement('img');
-    const paddedNumber = String(i).padStart(3, '0'); // 001, 002, ..., 010
-    img.src = `images/f1s1_${paddedNumber}.jpg`;
-    img.alt = `Image ${i}`;
-    img.dataset.id = i; // 各画像に ID を持たせる
-
-    img.addEventListener('click', () => {
-      const currentPoem = poems[index];
-      if (img.dataset.id === currentPoem.id) {
-        img.style.visibility = 'hidden';  // 正解なら画像を消す（空間を保持）
-        index++;
-        showPoem();
-      } else {
-        alert("違います！");
-      }
-    });
-
-    imageGrid.appendChild(img);
+async function initializeApp() {
+  try {
+    state.poems = await loadPoemsFromCsv(POEM_CSV_PATH);
+    renderImageGrid(imageGridElement, IMAGE_COUNT);
+    updatePoemText();
+  } catch (error) {
+    console.error('Failed to initialize application:', error);
+    poemTextElement.textContent = 'データの読み込みに失敗しました。';
   }
 }
 
-function showPoem() {
-  if (index < poems.length) {
-    poemText.textContent = poems[index].ue;
+async function loadPoemsFromCsv(csvPath) {
+  const response = await fetch(csvPath);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${csvPath}: ${response.status} ${response.statusText}`);
+  }
+
+  const csvText = await response.text();
+  return parsePoems(csvText);
+}
+
+function parsePoems(csvText) {
+  return csvText
+    .trim()
+    .split('\n')
+    .slice(1) // ヘッダー除去
+    .filter(Boolean)
+    .map(parsePoemLine);
+}
+
+function parsePoemLine(line) {
+  const [id, , upper, lower] = line.split(',').map(part => part.trim());
+  return {
+    id,
+    upper,
+    lower,
+    full: `${upper}\n${lower}`,
+  };
+}
+
+function renderImageGrid(container, count) {
+  const fragment = document.createDocumentFragment();
+  for (let i = 1; i <= count; i += 1) {
+    fragment.appendChild(createImageElement(i));
+  }
+  container.appendChild(fragment);
+}
+
+function createImageElement(sequenceNumber) {
+  const img = document.createElement('img');
+  const paddedNumber = padNumber(sequenceNumber, IMAGE_ID_LENGTH);
+  img.src = `${IMAGE_PATH_PREFIX}${paddedNumber}${IMAGE_EXTENSION}`;
+  img.alt = `Image ${sequenceNumber}`;
+  img.dataset.id = String(sequenceNumber);
+  img.addEventListener('click', handleImageSelection);
+  return img;
+}
+
+function handleImageSelection(event) {
+  const target = event.currentTarget;
+  const selectedId = target.dataset.id;
+  const currentPoem = state.poems[state.currentIndex];
+
+  if (!currentPoem) {
+    return;
+  }
+
+  if (selectedId === currentPoem.id) {
+    target.style.visibility = 'hidden';
+    state.currentIndex += 1;
+    updatePoemText();
+  } else {
+    alert('違います！');
   }
 }
 
-window.onload = loadCSV;
+function updatePoemText() {
+  const currentPoem = state.poems[state.currentIndex];
+  if (!currentPoem) {
+    poemTextElement.textContent = '';
+    return;
+  }
+
+  poemTextElement.textContent = currentPoem.upper;
+}
+
+function padNumber(value, length) {
+  return value.toString().padStart(length, '0');
+}
